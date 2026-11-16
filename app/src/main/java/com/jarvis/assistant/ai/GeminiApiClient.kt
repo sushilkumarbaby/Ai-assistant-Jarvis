@@ -75,7 +75,7 @@ class GeminiApiClient {
             add("generationConfig", genConfig)
         }
 
-        val models = listOf("gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro")
+        val models = listOf("gemini-flash-lite-latest", "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.8-flash", "gemini-flash-latest")
         var lastException: Exception? = null
 
         for (model in models) {

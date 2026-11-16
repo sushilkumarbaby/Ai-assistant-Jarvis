@@ -170,20 +170,12 @@ fun MainDashboardScreen(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            "J.A.R.V.I.S.",
+                            "JARVIS",
                             color = CyanGlow,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = 3.sp,
                             fontFamily = FontFamily.Monospace
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            "MARK L",
-                            color = TextDim,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 2.sp
                         )
                     }
                 },
