@@ -35,14 +35,50 @@ class SpeechManager(private val context: Context) : TextToSpeech.OnInitListener 
             if (localeResult == TextToSpeech.LANG_MISSING_DATA || localeResult == TextToSpeech.LANG_NOT_SUPPORTED) {
                 tts?.setLanguage(Locale.US)
             }
+            configureMaleVoice()
             updateTtsParameters()
+        }
+    }
+
+    private fun configureMaleVoice() {
+        try {
+            val voices = tts?.voices ?: return
+            // 1. Search for UK Male voice first (canonical British JARVIS)
+            val ukMale = voices.firstOrNull { v ->
+                val name = v.name.lowercase(Locale.ROOT)
+                v.locale.language == "en" &&
+                    (name.contains("rjs") || name.contains("male") || name.contains("-m-") || name.contains("en-gb-x-gbc")) &&
+                    !name.contains("female")
+            }
+
+            // 2. Fallback to any English male voice
+            val anyMale = ukMale ?: voices.firstOrNull { v ->
+                val name = v.name.lowercase(Locale.ROOT)
+                v.locale.language == "en" &&
+                    (name.contains("male") || name.contains("-m-")) &&
+                    !name.contains("female")
+            }
+
+            // 3. Fallback to any non-female voice
+            val finalVoice = anyMale ?: voices.firstOrNull { v ->
+                val name = v.name.lowercase(Locale.ROOT)
+                v.locale.language == "en" && !name.contains("female") && !name.contains("f-")
+            }
+
+            if (finalVoice != null) {
+                tts?.voice = finalVoice
+            }
+        } catch (e: Exception) {
+            // Graceful fallback
         }
     }
 
     fun updateTtsParameters() {
         val prefs = JarvisApplication.instance.prefs
         tts?.setSpeechRate(prefs.voiceRate)
-        tts?.setPitch(prefs.voicePitch)
+        // Deep, refined British male baritone pitch (0.88f)
+        val defaultMalePitch = 0.88f
+        tts?.setPitch(if (prefs.voicePitch == 1.0f) defaultMalePitch else prefs.voicePitch)
     }
 
     fun speak(text: String, onDone: (() -> Unit)? = null) {

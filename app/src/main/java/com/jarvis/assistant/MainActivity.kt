@@ -22,14 +22,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.jarvis.assistant.ai.JarvisBrain
-import com.jarvis.assistant.ui.components.ArcReactorView
+import com.jarvis.assistant.ui.components.ArcReactorButton
 import com.jarvis.assistant.ui.theme.*
 import kotlinx.coroutines.launch
 
@@ -79,6 +81,9 @@ class MainActivity : ComponentActivity() {
                             onResult = onResult,
                             onError = onError
                         )
+                    },
+                    onStopVoice = {
+                        speechManager.stopSpeaking()
                     }
                 )
             }
@@ -101,15 +106,20 @@ class MainActivity : ComponentActivity() {
 
     private fun openDefaultAssistantSettings() {
         try {
-            // Directly opens Android's Default Apps / Voice Input Settings
-            val intent = Intent(Settings.ACTION_VOICE_INPUT_SETTINGS)
+            val intent = Intent(Settings.ACTION_VOICE_INPUT_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
             startActivity(intent)
         } catch (e: Exception) {
             try {
-                val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+                val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
                 startActivity(intent)
             } catch (e2: Exception) {
-                val intent = Intent(Settings.ACTION_SETTINGS)
+                val intent = Intent(Settings.ACTION_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
                 startActivity(intent)
             }
         }
@@ -124,7 +134,8 @@ fun MainDashboardScreen(
     onOpenAssistantSettings: () -> Unit,
     onOpenAccessibilitySettings: () -> Unit,
     onSendMessage: (String, (String) -> Unit) -> Unit,
-    onStartVoice: ((String) -> Unit, (String) -> Unit) -> Unit
+    onStartVoice: ((String) -> Unit, (String) -> Unit) -> Unit,
+    onStopVoice: () -> Unit
 ) {
     var apiKey by remember { mutableStateOf(prefs.geminiApiKey) }
     var userName by remember { mutableStateOf(prefs.userName) }
@@ -135,7 +146,7 @@ fun MainDashboardScreen(
             listOf(
                 ChatMessage(
                     "JARVIS",
-                    "Good day, ${prefs.userName}. All protocols active. Tap the button below to set me as your Default Android Assistant.",
+                    "All systems online, ${prefs.userName}. Tap my Arc Reactor to command.",
                     false
                 )
             )
@@ -143,7 +154,7 @@ fun MainDashboardScreen(
     }
     var inputText by remember { mutableStateOf("") }
     var isListening by remember { mutableStateOf(false) }
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Chat, 1: Assistant Settings, 2: Memory
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: HUD, 1: Settings, 2: Memory
 
     Scaffold(
         containerColor = BgDark,
@@ -153,16 +164,42 @@ fun MainDashboardScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(14.dp)
-                                .background(CyanGlow, CircleShape)
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(if (isListening) CyanBright else CyanGlow)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            "J.A.R.V.I.S. 4.0",
+                            "J.A.R.V.I.S.",
                             color = CyanGlow,
-                            fontSize = 17.sp,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 3.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            "MARK L",
+                            color = TextDim,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 2.sp
+                        )
+                    }
+                },
+                actions = {
+                    // Sleek corner settings button to keep HUD pure and uncluttered
+                    IconButton(
+                        onClick = { selectedTab = if (selectedTab == 1) 0 else 1 },
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .border(1.dp, if (selectedTab == 1) CyanGlow else CyanBorder, CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            tint = if (selectedTab == 1) CyanGlow else TextDim,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 },
@@ -170,24 +207,32 @@ fun MainDashboardScreen(
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = BgCard) {
+            NavigationBar(
+                containerColor = BgCard,
+                tonalElevation = 0.dp,
+                modifier = Modifier.border(
+                    width = 1.dp,
+                    color = CyanBorder.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                )
+            ) {
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Default.ChatBubble, contentDescription = "HUD", tint = if (selectedTab == 0) CyanGlow else TextDim) },
-                    label = { Text("HUD", color = if (selectedTab == 0) CyanGlow else TextDim, fontSize = 11.sp) }
+                    icon = { Icon(Icons.Default.Adjust, contentDescription = "HUD", tint = if (selectedTab == 0) CyanGlow else TextDim) },
+                    label = { Text("HUD", color = if (selectedTab == 0) CyanGlow else TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Config", tint = if (selectedTab == 1) CyanGlow else TextDim) },
-                    label = { Text("Config", color = if (selectedTab == 1) CyanGlow else TextDim, fontSize = 11.sp) }
+                    icon = { Icon(Icons.Default.Tune, contentDescription = "Config", tint = if (selectedTab == 1) CyanGlow else TextDim) },
+                    label = { Text("PROTOCOLS", color = if (selectedTab == 1) CyanGlow else TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Default.Psychology, contentDescription = "Memory", tint = if (selectedTab == 2) CyanGlow else TextDim) },
-                    label = { Text("Memory", color = if (selectedTab == 2) CyanGlow else TextDim, fontSize = 11.sp) }
+                    icon = { Icon(Icons.Default.Memory, contentDescription = "Memory", tint = if (selectedTab == 2) CyanGlow else TextDim) },
+                    label = { Text("MEMORY", color = if (selectedTab == 2) CyanGlow else TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
                 )
             }
         }
@@ -198,10 +243,11 @@ fun MainDashboardScreen(
                 .padding(padding)
         ) {
             when (selectedTab) {
-                0 -> HudChatTab(
+                0 -> HudScreen(
                     messages = messages,
                     inputText = inputText,
                     isListening = isListening,
+                    userName = prefs.userName,
                     onInputChanged = { inputText = it },
                     onSend = {
                         if (inputText.isNotBlank()) {
@@ -213,7 +259,7 @@ fun MainDashboardScreen(
                             }
                         }
                     },
-                    onToggleMic = {
+                    onToggleReactor = {
                         if (!isListening) {
                             isListening = true
                             onStartVoice(
@@ -230,12 +276,11 @@ fun MainDashboardScreen(
                             )
                         } else {
                             isListening = false
+                            onStopVoice()
                         }
-                    },
-                    onSetDefaultAssistant = onOpenAssistantSettings,
-                    onSetAccessibility = onOpenAccessibilitySettings
+                    }
                 )
-                1 -> ConfigTab(
+                1 -> ProtocolsSettingsScreen(
                     apiKey = apiKey,
                     onApiKeyChanged = {
                         apiKey = it
@@ -257,177 +302,138 @@ fun MainDashboardScreen(
                     onOpenAssistantSettings = onOpenAssistantSettings,
                     onOpenAccessibilitySettings = onOpenAccessibilitySettings
                 )
-                2 -> MemoryTab(memoryStorage = memoryStorage)
+                2 -> MemoryScreen(memoryStorage = memoryStorage)
             }
         }
     }
 }
 
+/**
+ * Clean, Clutter-Free Stark HUD Screen.
+ * Contains the prominent center Arc Reactor Button and clean conversational log.
+ */
 @Composable
-fun HudChatTab(
+fun HudScreen(
     messages: List<ChatMessage>,
     inputText: String,
     isListening: Boolean,
+    userName: String,
     onInputChanged: (String) -> Unit,
     onSend: () -> Unit,
-    onToggleMic: () -> Unit,
-    onSetDefaultAssistant: () -> Unit,
-    onSetAccessibility: () -> Unit
+    onToggleReactor: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Top Banner to replace Gemini / Google Assistant
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 4.dp)
-                .clickable { onSetDefaultAssistant() },
-            colors = CardDefaults.cardColors(containerColor = CyanDim),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.padding(10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.PhoneAndroid, contentDescription = null, tint = CyanGlow, modifier = Modifier.size(22.dp))
-                Spacer(modifier = Modifier.width(10.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Replace Gemini / Google Assistant", color = CyanGlow, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Text("Set JARVIS as default digital assistant", color = TextDim, fontSize = 10.sp)
-                }
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = CyanGlow)
-            }
-        }
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Second Banner: God-Mode Autopilot (Accessibility)
-        val isGodModeActive = com.jarvis.assistant.service.JarvisAccessibilityService.isServiceRunning
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 4.dp)
-                .clickable { onSetAccessibility() },
-            colors = CardDefaults.cardColors(containerColor = if (isGodModeActive) Color(0xFF064E3B) else Color(0xFF3B1E06)),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.padding(10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    if (isGodModeActive) Icons.Default.CheckCircle else Icons.Default.TouchApp,
-                    contentDescription = null,
-                    tint = if (isGodModeActive) Color(0xFF34D399) else Color(0xFFFBBF24),
-                    modifier = Modifier.size(22.dp)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        if (isGodModeActive) "God-Mode Autopilot: ACTIVE" else "God-Mode Autopilot: OFFLINE",
-                        color = if (isGodModeActive) Color(0xFF34D399) else Color(0xFFFBBF24),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        if (isGodModeActive) "Reels scroll, auto-click & screen control ready" else "Tap to enable Screen Automation in Accessibility Settings",
-                        color = TextDim,
-                        fontSize = 10.sp
-                    )
-                }
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = CyanGlow)
-            }
-        }
-
-        // Center Arc Reactor
-        ArcReactorView(
-            size = 110.dp,
+        // Center Tony Stark Arc Reactor Interactive Button
+        ArcReactorButton(
             isActive = isListening,
-            modifier = Modifier.padding(vertical = 8.dp)
+            onClick = onToggleReactor,
+            size = 230.dp,
+            modifier = Modifier.padding(vertical = 12.dp)
         )
 
-        // Chat Message Feed
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Clean conversational telemetry stream
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .fillMaxWidth(),
+            reverseLayout = true,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            items(messages) { msg ->
+            items(messages.reversed()) { msg ->
                 Card(
                     modifier = Modifier.fillMaxWidth(if (msg.isUser) 0.85f else 0.95f),
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (msg.isUser) Color(0xFF1E293B) else BgCard
+                        containerColor = if (msg.isUser) Color(0xFF131D32) else BgCard
                     ),
                     border = if (!msg.isUser) androidx.compose.foundation.BorderStroke(1.dp, CyanBorder) else null
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                msg.sender.uppercase(),
+                                color = if (msg.isUser) CyanBright else CyanGlow,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 2.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            msg.sender,
-                            color = if (msg.isUser) TextDim else CyanGlow,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
+                            msg.text,
+                            color = TextWhite,
+                            fontSize = 14.sp,
+                            lineHeight = 20.sp
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(msg.text, color = TextWhite, fontSize = 13.5.sp, lineHeight = 19.sp)
                     }
                 }
             }
         }
 
-        // Bottom Input Row
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Sleek Bottom Input Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TextField(
+            OutlinedTextField(
                 value = inputText,
                 onValueChange = onInputChanged,
-                placeholder = { Text("Command JARVIS...", color = TextDim, fontSize = 13.sp) },
-                colors = TextFieldDefaults.colors(
+                placeholder = {
+                    Text(
+                        if (isListening) "Listening to your voice..." else "Command JARVIS...",
+                        color = TextDim,
+                        fontSize = 13.sp
+                    )
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(24.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = CyanGlow,
+                    unfocusedBorderColor = CyanBorder,
                     focusedContainerColor = BgCard,
-                    unfocusedContainerColor = BgCard,
-                    focusedTextColor = TextWhite,
-                    unfocusedTextColor = TextWhite,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
+                    unfocusedContainerColor = BgCard
                 ),
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier
-                    .weight(1f)
-                    .border(1.dp, CyanBorder, RoundedCornerShape(20.dp))
+                modifier = Modifier.weight(1f)
             )
+
             Spacer(modifier = Modifier.width(8.dp))
+
             IconButton(
                 onClick = onSend,
-                colors = IconButtonDefaults.iconButtonColors(containerColor = CyanGlow)
+                modifier = Modifier
+                    .size(46.dp)
+                    .background(CyanGlow, CircleShape)
             ) {
-                Icon(Icons.Default.Send, contentDescription = "Send", tint = BgDark)
-            }
-            Spacer(modifier = Modifier.width(6.dp))
-            IconButton(
-                onClick = onToggleMic,
-                colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = if (isListening) RedGlow else CyanGlow
-                )
-            ) {
-                Icon(
-                    if (isListening) Icons.Default.MicOff else Icons.Default.Mic,
-                    contentDescription = "Voice",
-                    tint = if (isListening) TextWhite else BgDark
-                )
+                Icon(Icons.Default.Send, contentDescription = "Send", tint = BgDark, modifier = Modifier.size(20.dp))
             }
         }
     }
 }
 
+/**
+ * Dedicated System Settings & Protocols Screen.
+ * Houses God-Mode Autopilot, Default Assistant, API Keys, and Voice tuning.
+ */
 @Composable
-fun ConfigTab(
+fun ProtocolsSettingsScreen(
     apiKey: String,
     onApiKeyChanged: (String) -> Unit,
     userName: String,
@@ -439,109 +445,159 @@ fun ConfigTab(
     onOpenAssistantSettings: () -> Unit,
     onOpenAccessibilitySettings: () -> Unit
 ) {
-    Column(
+    val isGodModeActive = com.jarvis.assistant.service.JarvisAccessibilityService.isServiceRunning
+
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("SYSTEM CONFIGURATION", color = CyanGlow, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+        item {
+            Text(
+                "SYSTEM PROTOCOLS",
+                color = CyanGlow,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp,
+                fontFamily = FontFamily.Monospace
+            )
+        }
 
-        // God-Mode Autopilot Card
-        val isGodModeActive = com.jarvis.assistant.service.JarvisAccessibilityService.isServiceRunning
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = BgCard)
-        ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                Text(
-                    if (isGodModeActive) "⚡ God-Mode Autopilot (ONLINE)" else "⚠️ God-Mode Autopilot (OFFLINE)",
-                    color = if (isGodModeActive) Color(0xFF34D399) else Color(0xFFFBBF24),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "Enables autonomous reel scrolling, screen tapping, button clicking, and typing across all apps.",
-                    color = TextDim,
-                    fontSize = 11.5.sp
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Button(
-                    onClick = onOpenAccessibilitySettings,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isGodModeActive) Color(0xFF059669) else CyanGlow
-                    ),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
+        // 1. Digital Assistant Integration (Replace Gemini / Siri)
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = BgCard),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CyanBorder)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Smartphone, contentDescription = null, tint = CyanGlow, modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text("Default Assistant Integration", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        if (isGodModeActive) "Accessibility Enabled ✓" else "Enable God-Mode Accessibility",
-                        color = BgDark,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
+                        "Replace Google Gemini or Siri on your phone. Long-press Power or Home to summon JARVIS.",
+                        color = TextDim,
+                        fontSize = 12.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = onOpenAssistantSettings,
+                        colors = ButtonDefaults.buttonColors(containerColor = CyanGlow),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Set as Default Assistant", color = BgDark, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        // 2. God-Mode Autopilot (Accessibility Status & Toggle)
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = BgCard),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (isGodModeActive) Color(0xFF10B981) else CyanBorder
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (isGodModeActive) Icons.Default.CheckCircle else Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = if (isGodModeActive) Color(0xFF34D399) else Color(0xFFFBBF24),
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            if (isGodModeActive) "God-Mode Autopilot (Active)" else "God-Mode Autopilot (Offline)",
+                            color = if (isGodModeActive) Color(0xFF34D399) else Color(0xFFFBBF24),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        "Enables hands-free reels scrolling, clicking any named button on screen, and cross-app workflows.",
+                        color = TextDim,
+                        fontSize = 12.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = onOpenAccessibilitySettings,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isGodModeActive) Color(0xFF059669) else CyanGlow
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            if (isGodModeActive) "Accessibility Enabled ✓" else "Configure Accessibility",
+                            color = if (isGodModeActive) TextWhite else BgDark,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+
+        // 3. Neural Engine API Key
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = BgCard),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CyanBorder)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Google Gemini Neural Core", color = TextWhite, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = apiKey,
+                        onValueChange = onApiKeyChanged,
+                        placeholder = { Text("Enter Gemini API key (AIzaSy...)", color = TextDim, fontSize = 12.sp) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CyanGlow,
+                            unfocusedBorderColor = CyanBorder
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Text("Addressing Title", color = TextWhite, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = userName,
+                        onValueChange = onUserNameChanged,
+                        placeholder = { Text("Boss / Sir", color = TextDim, fontSize = 12.sp) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CyanGlow,
+                            unfocusedBorderColor = CyanBorder
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Text("Male Voice Speech Rate: ${String.format("%.2f", voiceRate)}x", color = TextWhite, fontSize = 12.sp)
+                    Slider(
+                        value = voiceRate,
+                        onValueChange = onVoiceRateChanged,
+                        valueRange = 0.8f..1.3f,
+                        colors = SliderDefaults.colors(thumbColor = CyanGlow, activeTrackColor = CyanGlow)
                     )
                 }
-            }
-        }
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = BgCard)
-        ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                Text("Default Assistant Integration", color = CyanGlow, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("To replace Gemini or Siri on your phone, set JARVIS as your phone's Digital Assistant.", color = TextDim, fontSize = 11.5.sp)
-                Spacer(modifier = Modifier.height(10.dp))
-                Button(
-                    onClick = onOpenAssistantSettings,
-                    colors = ButtonDefaults.buttonColors(containerColor = CyanGlow),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("Open Android Assistant Settings", color = BgDark, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = BgCard)
-        ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Google Gemini Neural API Key", color = TextWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                OutlinedTextField(
-                    value = apiKey,
-                    onValueChange = onApiKeyChanged,
-                    placeholder = { Text("Paste your API key...", color = TextDim, fontSize = 12.sp) },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CyanGlow, unfocusedBorderColor = CyanBorder),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Text("Addressing Name / Title", color = TextWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                OutlinedTextField(
-                    value = userName,
-                    onValueChange = onUserNameChanged,
-                    placeholder = { Text("Sir", color = TextDim, fontSize = 12.sp) },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CyanGlow, unfocusedBorderColor = CyanBorder),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Text("Voice Speech Rate: ${String.format("%.2f", voiceRate)}x", color = TextWhite, fontSize = 12.sp)
-                Slider(
-                    value = voiceRate,
-                    onValueChange = onVoiceRateChanged,
-                    valueRange = 0.8f..1.3f,
-                    colors = SliderDefaults.colors(thumbColor = CyanGlow, activeTrackColor = CyanGlow)
-                )
             }
         }
     }
 }
 
+/**
+ * Long-Term Persistent Memory Matrix Screen.
+ */
 @Composable
-fun MemoryTab(memoryStorage: com.jarvis.assistant.data.MemoryStorage) {
+fun MemoryScreen(memoryStorage: com.jarvis.assistant.data.MemoryStorage) {
     var memories by remember { mutableStateOf(memoryStorage.getAllMemories()) }
 
     Column(
@@ -554,7 +610,14 @@ fun MemoryTab(memoryStorage: com.jarvis.assistant.data.MemoryStorage) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("LONG-TERM MEMORY", color = CyanGlow, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+            Text(
+                "LONG-TERM MEMORY",
+                color = CyanGlow,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp,
+                fontFamily = FontFamily.Monospace
+            )
             if (memories.isNotEmpty()) {
                 TextButton(onClick = {
                     memoryStorage.clearAll()
@@ -565,12 +628,12 @@ fun MemoryTab(memoryStorage: com.jarvis.assistant.data.MemoryStorage) {
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         if (memories.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    "No retained facts yet.\nSay 'Remember that...' to log facts.",
+                    "Memory core initialized.\nSay 'Remember that...' to log facts.",
                     color = TextDim,
                     fontSize = 13.sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center

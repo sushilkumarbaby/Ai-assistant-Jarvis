@@ -75,7 +75,7 @@ class GeminiApiClient {
             add("generationConfig", genConfig)
         }
 
-        val models = listOf("gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b")
+        val models = listOf("gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro")
         var lastException: Exception? = null
 
         for (model in models) {
@@ -104,6 +104,8 @@ class GeminiApiClient {
                     }
                 } else {
                     lastException = Exception("Gemini API Error (HTTP ${response.code}): $responseBody")
+                    // Delay before trying fallback model
+                    kotlinx.coroutines.delay(350)
                 }
             } catch (e: Exception) {
                 lastException = e
