@@ -223,3 +223,22 @@ fun ArcReactorButton(
         }
     }
 }
+
+/**
+ * Backwards compatibility composable for Overlay & Floating HUD.
+ */
+@Composable
+fun ArcReactorView(
+    modifier: Modifier = Modifier,
+    size: Dp = 120.dp,
+    isActive: Boolean = false,
+    coreColor: Color = CyanGlow
+) {
+    ArcReactorButton(
+        isActive = isActive,
+        onClick = {},
+        size = size,
+        modifier = modifier
+    )
+}
+

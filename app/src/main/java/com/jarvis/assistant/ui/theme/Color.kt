@@ -14,6 +14,7 @@ val CyanDim = Color(0x1A00E5FF)          // Subtle Ambient Glow
 val CyanBorder = Color(0x4000E5FF)       // HUD Border Frame
 
 val BlueNeon = Color(0xFF0284C7)         // Stark Sub-thruster Blue
+val BlueAccent = Color(0xFF0284C7)       // Stark Primary Accent Blue
 val GoldAccent = Color(0xFFF59E0B)       // Mark-L Armor Gold
 val CoreWhite = Color(0xFFFFFFFF)        // Arc Reactor Fusion Center
 
