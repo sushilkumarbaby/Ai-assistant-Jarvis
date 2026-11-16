@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">JARVIS 4.0</string>
+    <string name="assistant_name">JARVIS</string>
+    <string name="default_user_name">Sir</string>
+    <string name="service_label">JARVIS Voice Assistant</string>
+    <string name="assist_prompt">Listening, sir…</string>
+    <string name="settings_title">JARVIS System Configuration</string>
+    <string name="api_key_label">Google Gemini API Key</string>
+    <string name="api_key_hint">Paste your key from Google AI Studio</string>
+    <string name="save_button">Save Protocols</string>
+    <string name="memory_title">Long-Term Memory Matrix</string>
+    <string name="clear_memory">Clear Retained Data</string>
+    <string name="diagnostic_title">System Telemetry</string>
+    <string name="default_assistant_desc">Set JARVIS as your default assistant under Settings → Apps → Default Apps → Digital Assistant App.</string>
+    <string name="accessibility_service_label">JARVIS God-Mode Autopilot</string>
+    <string name="accessibility_service_description">JARVIS God-Mode Accessibility Service empowers hands-free screen navigation, reel scrolling, button clicking, form filling, and autonomous device workflows.</string>
+</resources>
