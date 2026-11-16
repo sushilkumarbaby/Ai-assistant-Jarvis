@@ -4,5 +4,4 @@
     android:sessionService="com.jarvis.assistant.service.JarvisVoiceInteractionSessionService"
     android:recognitionService="com.jarvis.assistant.service.JarvisRecognitionService"
     android:supportsAssist="true"
-    android:supportsLaunchFromKeyguard="true"
     android:supportsLocalInteraction="true" />

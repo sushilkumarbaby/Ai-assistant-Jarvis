@@ -30,8 +30,8 @@ jobs:
           fi
           chmod +x gradlew
 
-      - name: Build Debug & Release APK and AAB Bundle
-        run: ./gradlew assembleDebug assembleRelease bundleRelease || ./gradlew assembleDebug
+      - name: Build Installable Debug APK
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Upload Installable Debug APK (Ready for Phone Install)
         uses: actions/upload-artifact@v4
@@ -39,14 +39,15 @@ jobs:
           name: jarvis-installable-apk
           path: app/build/outputs/apk/debug/*.apk
 
-      - name: Upload Release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: jarvis-release-apk
-          path: app/build/outputs/apk/release/*.apk
+      - name: Build Release Bundle & APK (Optional)
+        continue-on-error: true
+        run: ./gradlew bundleRelease assembleRelease --stacktrace
 
-      - name: Upload Play Store AAB Bundle
+      - name: Upload Release Artifacts
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: jarvis-playstore-bundle
-          path: app/build/outputs/bundle/release/*.aab
+          name: jarvis-release-artifacts
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
